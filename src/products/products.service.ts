@@ -1,11 +1,11 @@
-import { BadRequestException, HttpException, Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, HttpException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from "@nestjs/typeorm";
+import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { Repository } from "typeorm";
+import { validate as isUUID } from "uuid";
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { Product } from './entities/product.entity';
-import { PaginationDto } from 'src/common/dtos/pagination.dto';
-import { validate as isUUID } from "uuid";
+import { Product, ProductImage } from './entities';
 
 @Injectable()
 export class ProductsService {
@@ -14,17 +14,28 @@ export class ProductsService {
 
   constructor(
     @InjectRepository(Product)
-    private readonly productRepository: Repository<Product>
+    private readonly productRepository: Repository<Product>,
+    @InjectRepository(ProductImage)
+    private readonly productImageRepository: Repository<ProductImage>
   ) { }
 
   async create(createProductDto: CreateProductDto) {
 
     try {
-      const product = this.productRepository.create(createProductDto); // create a new query but not save it
+
+      const { images = [], ...productDetails } = createProductDto;
+
+      const product = this.productRepository.create({
+        ...productDetails,
+        images: images.map(image => this.productImageRepository.create({ url: image })),
+      }); // create a new query but not save it
 
       await this.productRepository.save(product); // save the query
 
-      return product;
+      return {
+        ...product,
+        images: images,
+      };
 
     } catch (error) {
       this.handleDBExceptions(error);
@@ -75,7 +86,8 @@ export class ProductsService {
 
     const product = await this.productRepository.preload({
       id: id,
-      ...updateProductDto
+      ...updateProductDto,
+      images: [],
     });
 
     if (!product) throw new NotFoundException(`Product with ${id} not found!`);
@@ -83,11 +95,11 @@ export class ProductsService {
     try {
       await this.productRepository.save(product);
 
-      return product
+      return product;
     } catch (error) {
       this.handleDBExceptions(error);
     }
-    
+
   }
 
   async remove(id: string) {
