@@ -59,7 +59,10 @@ export class Product {
   @OneToMany(
     () => ProductImage,
     productImage => productImage.product,
-    { cascade: true }
+    {
+      cascade: true, // cascade means that if we delete a product, all its images will be deleted too
+      eager: true, // eager means that when we fetch a product, all its images will be fetched too
+    }
   )
   images: ProductImage[];
 
