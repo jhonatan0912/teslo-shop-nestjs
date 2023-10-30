@@ -10,6 +10,10 @@ import { ProductsService } from './products.service';
     TypeOrmModule.forFeature([Product, ProductImage]),
   ],
   controllers: [ProductsController],
-  providers: [ProductsService]
+  providers: [ProductsService],
+  exports: [
+    ProductsService,
+    TypeOrmModule, // export TypeOrmModule to be used in other modules, the repository
+  ]
 })
 export class ProductsModule { };
